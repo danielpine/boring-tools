@@ -19,3 +19,6 @@ public class TableBuilderTest {
 ```
 ### Console
 <img src="https://danielpine.github.io/img/page-console.png" width = "100%"/>
+
+## Maven repo
+https://s01.oss.sonatype.org/content/groups/public
