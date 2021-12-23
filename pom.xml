@@ -22,6 +22,7 @@
     <java.version>8</java.version>
 </properties>
 <dependencies>
+
     <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
@@ -33,6 +34,17 @@
         <version>4.11</version>
         <scope>test</scope>
     </dependency>
+    <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>31.0.1-jre</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-core</artifactId>
+        <version>5.0.9.RELEASE</version>
+    </dependency>
+
 </dependencies>
 <!-- 版权许可 -->
 <licenses>

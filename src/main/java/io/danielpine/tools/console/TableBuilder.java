@@ -3,7 +3,6 @@ package io.danielpine.tools.console;
 import org.apache.commons.lang3.StringUtils;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -30,38 +29,24 @@ public class TableBuilder {
             System.out.println("===No Data to Display===");
             return;
         }
-        T t = dous.get(0);
-        Class<?> clz = t.getClass();
-        Field[] declaredFields = clz.getDeclaredFields();
-        List<String> fields = Stream.of(declaredFields)
-                .map(Field::getName)
-                .filter(n -> !skipFields.contains(n))
+        List<Field> fields = Stream.of(dous.get(0).getClass().getDeclaredFields())
+                .filter(f -> !skipFields.contains(f.getName()))
                 .collect(Collectors.toList());
-        Table table = addHeaders(fields.stream().map(StringUtils::capitalize).collect(Collectors.toList()))
-                .enableAutoIndex()
-                .build();
-        dous.forEach(dou -> {
-            List<String> columns = fields.stream().map(name -> {
-                try {
-                    String getter = "get";
-                    if (name.length() == 1) {
-                        getter += StringUtils.capitalize(name);
-                    } else {
-                        String first = name.substring(0, 2);
-                        if (StringUtils.isAllLowerCase(first)) {
-                            getter += StringUtils.capitalize(first) + name.substring(2);
-                        } else {
-                            getter += name;
-                        }
+        List<String> headers = fields.stream().map(Field::getName).map(StringUtils::capitalize).collect(Collectors.toList());
+        Table table = this.addHeaders(headers).enableAutoIndex().build();
+        dous.stream().map(dou -> fields
+                .stream()
+                .map(f -> {
+                    try {
+                        f.setAccessible(true);
+                        return String.valueOf(f.get(dou));
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                        return "-";
                     }
-                    Method method = clz.getMethod(getter);
-                    return String.valueOf(method.invoke(dou));
-                } catch (Exception e) {
-                    return "";
-                }
-            }).collect(Collectors.toList());
-            table.put(columns);
-        });
+                })
+                .collect(Collectors.toList())
+        ).forEach(table::put);
         table.display();
     }
 
@@ -147,6 +132,12 @@ public class TableBuilder {
             return record;
         }
 
+        StringBuilder context = new StringBuilder();
+
+        private void appendLine(String text) {
+            context.append(text).append("\n");
+        }
+
         public void display() {
             List<Integer> record = computeMaxColumnLength();
             StringBuilder borderBuilder = new StringBuilder();
@@ -159,20 +150,25 @@ public class TableBuilder {
                 tplBuilder.append("| %-" + (record.get(i) + 2) + "s");
             }
             String tpl = tplBuilder.append("|").toString();
-            System.out.println(border);
-            System.out.println(String.format(tpl, headers.toArray()));
-            System.out.println(border);
+            appendLine(border);
+            appendLine(String.format(tpl, headers.toArray()));
+            appendLine(border);
             for (List<String> cols : rows) {
                 StringBuilder tplColBuilder = new StringBuilder();
                 for (int i = 0; i < headers.size(); i++) {
                     String col = cols.get(i);
                     int countChinese = countChinese(col);
-                    tplColBuilder.append("| %-" + (record.get(i) + 2 - countChinese) + "s");
+                    tplColBuilder.append("| %-").append(record.get(i) + 2 - countChinese).append("s");
                 }
                 String tplCol = tplColBuilder.append("|").toString();
-                System.out.println(String.format(tplCol, cols.toArray()));
+                appendLine(String.format(tplCol, cols.toArray()));
             }
-            System.out.println(border);
+            appendLine(border);
+            print();
+        }
+
+        private void print() {
+            System.out.println(context.toString());
         }
     }
 
