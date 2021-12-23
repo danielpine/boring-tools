@@ -1,7 +1,9 @@
 package io.danielpine.tools.console;
 
 import org.apache.commons.lang3.StringUtils;
+import org.fusesource.jansi.Ansi;
 
+import java.awt.*;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,17 +12,43 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.fusesource.jansi.Ansi;
+
 public class TableBuilder {
     List<String> headers = new ArrayList<>();
     List<String> skipFields = new ArrayList<>();
     boolean autoIndex = false;
+    boolean ansi = false;
+    Ansi.Color headBackground = Ansi.Color.BLUE;
+    Ansi.Color bodyBackgroundOdd = Ansi.Color.BLACK;
+    Ansi.Color bodyBackgroundEven = Ansi.Color.WHITE;
 
     public static TableBuilder newBuilder() {
         return new TableBuilder();
     }
 
+    public TableBuilder setHeadBackground(Ansi.Color headBackground) {
+        this.headBackground = headBackground;
+        return this;
+    }
+
+    public TableBuilder setBodyBackgroundOdd(Ansi.Color bodyBackgroundOdd) {
+        this.bodyBackgroundOdd = bodyBackgroundOdd;
+        return this;
+    }
+
+    public TableBuilder setBodyBackgroundEven(Ansi.Color bodyBackgroundEven) {
+        this.bodyBackgroundEven = bodyBackgroundEven;
+        return this;
+    }
+
     public TableBuilder enableAutoIndex() {
         autoIndex = true;
+        return this;
+    }
+
+    public TableBuilder enableAnsi() {
+        ansi = true;
         return this;
     }
 
@@ -62,12 +90,60 @@ public class TableBuilder {
     public Table build() {
         Table table = new Table();
         table.setHeaders(headers);
+        table.setAnsi(ansi);
+        table.setAutoIndex(autoIndex);
+        table.setHeadBackground(headBackground);
+        table.setBodyBackgroundOdd(bodyBackgroundOdd);
+        table.setBodyBackgroundEven(bodyBackgroundEven);
         return table;
+    }
+
+    private enum LineType {
+        Head,
+        Body
     }
 
     private class Table {
         List<String> headers;
         List<List<String>> rows = new ArrayList<>();
+        boolean autoIndex = false;
+        boolean ansi = false;
+        int lines = 1;
+        Ansi.Color headBackground = Ansi.Color.BLUE;
+        Ansi.Color bodyBackgroundOdd = Ansi.Color.BLACK;
+        Ansi.Color bodyBackgroundEven = Ansi.Color.WHITE;
+
+        public void setLines(int lines) {
+            this.lines = lines;
+        }
+
+        public void setHeadBackground(Ansi.Color headBackground) {
+            this.headBackground = headBackground;
+        }
+
+        public void setBodyBackgroundOdd(Ansi.Color bodyBackgroundOdd) {
+            this.bodyBackgroundOdd = bodyBackgroundOdd;
+        }
+
+        public void setBodyBackgroundEven(Ansi.Color bodyBackgroundEven) {
+            this.bodyBackgroundEven = bodyBackgroundEven;
+        }
+
+        public boolean isAutoIndex() {
+            return autoIndex;
+        }
+
+        public void setAutoIndex(boolean autoIndex) {
+            this.autoIndex = autoIndex;
+        }
+
+        public boolean isAnsi() {
+            return ansi;
+        }
+
+        public void setAnsi(boolean ansi) {
+            this.ansi = ansi;
+        }
 
         public List<String> getHeaders() {
             return headers;
@@ -87,6 +163,7 @@ public class TableBuilder {
 
         public Table put(List<String> cols) {
             this.rows.add(cols);
+            lines++;
             return this;
         }
 
@@ -138,6 +215,30 @@ public class TableBuilder {
             context.append(text).append("\n");
         }
 
+        int bodyCount = 0;
+
+        private void appendBody(String text) {
+            if (autoIndex) {
+                text = String.format("|%-" + String.valueOf(lines).length() + "d", bodyCount) + text;
+            }
+            appendLine(text, bodyCount % 2 == 0 ? bodyBackgroundEven : bodyBackgroundOdd);
+            bodyCount++;
+        }
+
+        private void appendHead(String text) {
+            if (autoIndex) {
+                text = String.format("|%-" + String.valueOf(lines).length() + "s", "#") + text;
+            }
+            appendLine(text, headBackground);
+        }
+
+        private void appendLine(String text, Ansi.Color color) {
+            if (ansi) {
+                text = Ansi.ansi().eraseScreen().bg(color).a(text).reset().toString();
+            }
+            context.append(text).append("\n");
+        }
+
         public void display() {
             List<Integer> record = computeMaxColumnLength();
             StringBuilder borderBuilder = new StringBuilder();
@@ -150,9 +251,9 @@ public class TableBuilder {
                 tplBuilder.append("| %-" + (record.get(i) + 2) + "s");
             }
             String tpl = tplBuilder.append("|").toString();
-            appendLine(border);
-            appendLine(String.format(tpl, headers.toArray()));
-            appendLine(border);
+            if (!ansi) appendLine(border);
+            appendHead(String.format(tpl, headers.toArray()));
+            if (!ansi) appendLine(border);
             for (List<String> cols : rows) {
                 StringBuilder tplColBuilder = new StringBuilder();
                 for (int i = 0; i < headers.size(); i++) {
@@ -161,9 +262,9 @@ public class TableBuilder {
                     tplColBuilder.append("| %-").append(record.get(i) + 2 - countChinese).append("s");
                 }
                 String tplCol = tplColBuilder.append("|").toString();
-                appendLine(String.format(tplCol, cols.toArray()));
+                appendBody(String.format(tplCol, cols.toArray()));
             }
-            appendLine(border);
+            if (!ansi) appendLine(border);
             print();
         }
 

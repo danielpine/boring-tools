@@ -1,5 +1,6 @@
 package io.danielpine.tools.console;
 
+import org.fusesource.jansi.Ansi;
 import org.junit.Test;
 import org.springframework.util.StopWatch;
 
@@ -10,31 +11,60 @@ public class TableBuilderTest {
 
     @Test
     public void display() {
-        TableBuilder.newBuilder().display(
-                Arrays.asList(
-                        new User("小雨点", "Rain", "China"),
-                        new User("Daniel Pine", "Pine", "中国")
-                )
+        List<User> data = Arrays.asList(
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国")
         );
+
+        TableBuilder.newBuilder()
+                .enableAnsi()
+                .enableAutoIndex()
+                .setHeadBackground(Ansi.Color.CYAN)
+                .setBodyBackgroundOdd(Ansi.Color.YELLOW)
+                .setBodyBackgroundEven(Ansi.Color.WHITE)
+                .display(data);
     }
 
     @Test
     public void tt() {
         List<User> users = Arrays.asList(
                 new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
+                new User("Daniel Pine", "Pine", "中国"),
+                new User("小雨点", "Rain", "China"),
                 new User("Daniel Pine", "Pine", "中国")
         );
         StopWatch stopwatch = new StopWatch();
         stopwatch.start("0");
         stopwatch.stop();
+        stopwatch.start("tb");
+        TableBuilder.newBuilder().display(users);
+        stopwatch.stop();
         stopwatch.start("tt");
         TT<User> data = TT.data(users);
         data.display();
         stopwatch.stop();
-        stopwatch.start("tb");
-        TableBuilder.newBuilder().display(users);
-        stopwatch.stop();
-
         System.out.println(stopwatch.prettyPrint());
     }
 }
