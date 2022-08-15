@@ -2,8 +2,9 @@ package io.danielpine.tools.console;
 
 import org.apache.commons.lang3.StringUtils;
 import org.fusesource.jansi.Ansi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,9 +13,10 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.fusesource.jansi.Ansi;
-
 public class TableBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(TableBuilder.class);
+
     List<String> headers = new ArrayList<>();
     List<String> skipFields = new ArrayList<>();
     boolean autoIndex = false;
@@ -53,13 +55,19 @@ public class TableBuilder {
     }
 
     public <T> void display(List<T> dous) {
+        Table table = data(dous);
+        if (table == null) return;
+        table.display();
+    }
+
+    public <T> Table data(List<T> dous) {
         if (Objects.isNull(dous) || dous.isEmpty()) {
-            System.out.println("===No Data to Display===");
-            return;
+            logger.warn("===No Data to Display===");
+            return null;
         }
         List<Field> fields = Stream.of(dous.get(0).getClass().getDeclaredFields())
-                .filter(f -> !skipFields.contains(f.getName()))
-                .collect(Collectors.toList());
+                                   .filter(f -> !skipFields.contains(f.getName()))
+                                   .collect(Collectors.toList());
         List<String> headers = fields.stream().map(Field::getName).map(StringUtils::capitalize).collect(Collectors.toList());
         Table table = this.addHeaders(headers).enableAutoIndex().build();
         dous.stream().map(dou -> fields
@@ -75,7 +83,7 @@ public class TableBuilder {
                 })
                 .collect(Collectors.toList())
         ).forEach(table::put);
-        table.display();
+        return table;
     }
 
     public TableBuilder addHeaders(List<String> headers) {
@@ -103,9 +111,13 @@ public class TableBuilder {
         Body
     }
 
-    private class Table {
+    public class Table {
+
+        private final Logger logger = LoggerFactory.getLogger(TableBuilder.class);
+
         List<String> headers;
         List<List<String>> rows = new ArrayList<>();
+        boolean generated = false;
         boolean autoIndex = false;
         boolean ansi = false;
         int lines = 1;
@@ -218,17 +230,11 @@ public class TableBuilder {
         int bodyCount = 0;
 
         private void appendBody(String text) {
-            if (autoIndex) {
-                text = String.format("|%-" + String.valueOf(lines).length() + "d", bodyCount) + text;
-            }
             appendLine(text, bodyCount % 2 == 0 ? bodyBackgroundEven : bodyBackgroundOdd);
             bodyCount++;
         }
 
         private void appendHead(String text) {
-            if (autoIndex) {
-                text = String.format("|%-" + String.valueOf(lines).length() + "s", "#") + text;
-            }
             appendLine(text, headBackground);
         }
 
@@ -240,6 +246,19 @@ public class TableBuilder {
         }
 
         public void display() {
+            genContent();
+            logger.info(getContent());
+        }
+
+        private void genContent() {
+            if (generated) return;
+            if (autoIndex) {
+                headers.add(0, "#");
+                int index = 0;
+                for (List<String> row : rows) {
+                    row.add(0, String.valueOf(++index));
+                }
+            }
             List<Integer> record = computeMaxColumnLength();
             StringBuilder borderBuilder = new StringBuilder();
             for (int i = 0; i < headers.size(); i++) {
@@ -265,12 +284,14 @@ public class TableBuilder {
                 appendBody(String.format(tplCol, cols.toArray()));
             }
             if (!ansi) appendLine(border);
-            print();
+            generated = true;
         }
 
-        private void print() {
-            System.out.println(context.toString());
+        public String getContent() {
+            genContent();
+            return "TABLE DATA:\n" + context.toString() + "\n";
         }
+
     }
 
     public TableBuilder skipFields(String... fields) {
