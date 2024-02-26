@@ -7,7 +7,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.StopWatch;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TableBuilderTest {
 
@@ -18,6 +20,16 @@ public class TableBuilderTest {
             new User("123", "Rain", "China"),
             new User("Daniel Pine", "Pine", "22")
     );
+
+    List<Map<String, Object>> maps = Arrays.asList(
+            new HashMap<String, Object>() {
+                {
+                    put("a", "1");
+                    put("b", "2");
+                    put("c", "3");
+                    put("d", "4");
+                }
+            });
 
 
     @Test
@@ -39,6 +51,19 @@ public class TableBuilderTest {
                     .setBodyBackgroundOdd(Ansi.Color.YELLOW)
                     .setBodyBackgroundEven(Ansi.Color.WHITE)
                     .display(users);
+    }
+
+    @Test
+    public void displayMaps() {
+        String content = TableBuilder.newBuilder()
+                                     .enableAnsi()
+                                     .enableAutoIndex()
+                                     .setHeadBackground(Ansi.Color.CYAN)
+                                     .setBodyBackgroundOdd(Ansi.Color.YELLOW)
+                                     .setBodyBackgroundEven(Ansi.Color.WHITE)
+                                     .data(maps)
+                                     .getContent();
+        System.out.println(content);
     }
 
     @Test

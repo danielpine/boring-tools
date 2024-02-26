@@ -6,10 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -65,6 +62,34 @@ public class TableBuilder {
             logger.warn("===No Data to Display===");
             return null;
         }
+        T one = dous.get(0);
+        if (one instanceof Map) {
+            return buildFromMap((List<Map>) dous);
+        }
+        return buildFromObject(dous);
+    }
+
+    private Table buildFromMap(List<Map> dous) {
+        Map map = dous.get(0);
+        // TargetMap
+        if (map.containsKey("targetMap")) {
+            dous = dous.stream().map(d -> (Map) d.get("targetMap")).collect(Collectors.toList());
+        }
+        List<String> fields = Stream.of(map.keySet().toArray())
+                                    .map(String::valueOf)
+                                    .filter(f -> !skipFields.contains(f))
+                                    .collect(Collectors.toList());
+        List<String> headers = fields.stream().map(StringUtils::capitalize).collect(Collectors.toList());
+        Table table = this.addHeaders(headers).enableAutoIndex().build();
+        dous.stream().map(dou -> fields
+                .stream()
+                .map(f -> String.valueOf((dou).get(f)))
+                .collect(Collectors.toList())
+        ).forEach(table::put);
+        return table;
+    }
+
+    private <T> Table buildFromObject(List<T> dous) {
         List<Field> fields = Stream.of(dous.get(0).getClass().getDeclaredFields())
                                    .filter(f -> !skipFields.contains(f.getName()))
                                    .collect(Collectors.toList());
